@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.7/axios.min.js"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div>
+      Signup
+      <input type="text" placeholder="Username" id="signupUsername" />
+      <input type="text" placeholder="Password" id="signupPassword" />
+      <button onclick="signUp()">Signup</button>
+    </div>
+    <div>
+      Signin
+      <input type="text" placeholder="Username" id="signinUsername" />
+      <input type="text" placeholder="Password" id="signinPassword" />
+      <button onclick="signIn()">Signin</button>
+    </div>
+    <div>
+      <button onclick="getTodos()">Click to get your todos</button>
+    </div>
+
+    <div>
+      <input type="text" id="inpBox" />
+      <button onclick="addTodo()">Add Todo</button>
+    </div>
+
+    <!-- ToDos Section and working -->
+    <div id="answers"></div>
+  </body>
+
+  <!-- signup, signin and todos getter -->
+  <script>
+    async function signUp() {
+      const username = document.getElementById("signupUsername").value;
+      const password = document.getElementById("signupPassword").value;
+
+      await axios.post("http://localhost:3000/signup", {
+        username: username,
+        password: password,
+      });
+      alert("Successfully signed up");
+    }
+
+    async function signIn() {
+      const username = document.getElementById("signinUsername").value;
+      const password = document.getElementById("signinPassword").value;
+
+      const response = await axios.post("http://localhost:3000/signin", {
+        username: username,
+        password: password,
+      });
+
+      localStorage.setItem("accessToken", response.data.accessToken);
+      alert("Successfully signed in");
+    }
+
+    async function getTodos() {
+      const ansEle = document.getElementById("answers");
+      ansEle.remove();
+
+      const mainDiv = document.createElement("div");
+      mainDiv.setAttribute("id", "answers");
+      document.body.appendChild(mainDiv);
+      const response = await axios.get("http://localhost:3000/todos", {
+        headers: {
+          Authorization: localStorage.getItem("accessToken"),
+        },
+      });
+
+      const todos = response.data;
+      console.log(todos);
+
+      if (todos) {
+        todos.forEach((element) => {
+          console.log("in the loop");
+          const taskDiv = document.createElement("div");
+          taskDiv.setAttribute("id", element.id);
+
+          const taskSpan = document.createElement("span");
+          taskSpan.setAttribute("id", element.id);
+          taskSpan.innerHTML = element.task;
+
+          const editButton = document.createElement("button");
+          editButton.innerText = "edit";
+          editButton.setAttribute("id", `${element.id}`);
+          editButton.setAttribute("onclick", `editTask(${element.id})`);
+
+          const delButton = document.createElement("button");
+          delButton.innerText = "delete";
+          delButton.setAttribute("onclick", `removeTask(${element.id})`);
+
+          taskSpan.innerHTML = element.id + ". " + element.task;
+          taskDiv.appendChild(taskSpan);
+          taskDiv.appendChild(delButton);
+          taskDiv.appendChild(editButton);
+
+          const mainDiv = document.getElementById("answers");
+          mainDiv.appendChild(taskDiv);
+        });
+      }
+    }
+
+    async function editTask(n) {
+      const divEle = document.getElementById(n);
+      const spanEle = divEle.childNodes[0];
+      const btn1 = divEle.childNodes[1];
+      const btn2 = divEle.childNodes[2];
+
+      spanEle.remove();
+      btn1.remove();
+      btn2.remove();
+
+      const inpBox = document.createElement("input");
+      const setBtn = document.createElement("button");
+      setBtn.innerHTML = "Edit";
+
+      divEle.appendChild(inpBox);
+      divEle.appendChild(setBtn);
+      setBtn.onclick = async function () {
+        await axios
+          .put(
+            "http://localhost:3000/todos",
+            {
+              id: n,
+              task: inpBox.value,
+            },
+            {
+              headers: {
+                Authorization: localStorage.getItem("accessToken"),
+              },
+            }
+          )
+          .then((resolve) => {
+            getTodos();
+          });
+      };
+    }
+
+    async function removeTask(n) {
+      await axios
+        .delete("http://localhost:3000/todos", {
+          headers: {
+            Authorization: localStorage.getItem("accessToken"),
+          },
+          data: {
+            id: n,
+          },
+        })
+        .then((resolve) => {
+          getTodos();
+        });
+    }
+
+    async function addTodo() {
+      await axios
+        .post(
+          "http://localhost:3000/todos",
+          {
+            task: document.getElementById("inpBox").value,
+          },
+          {
+            headers: {
+              Authorization: localStorage.getItem("accessToken"),
+            },
+          }
+        )
+        .then(getTodos());
+    }
+  </script>
+</html>
